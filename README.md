@@ -1,20 +1,31 @@
-# Lucas Orbolato Carvalho - Research Pages
+# Stochastic Strategic Demand-Capacity Balancing Using Model-Free Reinforcement Learning
 
-This repository hosts public research pages for Lucas Orbolato Carvalho, Aeronautics Institute of Technology (ITA), with work on air traffic flow and capacity management, reinforcement learning, runway capacity, demand-capacity balancing, Urban Air Mobility, aviation analytics, and uncertainty.
+Public paper page and conference materials for:
 
-## Research and publications
+**Lucas Orbolato Carvalho and Mayara Condé Rocha Murça, “Stochastic Strategic Demand-Capacity Balancing Using Model-Free Reinforcement Learning,” 45th Digital Avionics Systems Conference (DASC), 2026.**
 
-**Publication hub:** https://orbolato.github.io/dasc2026-paper-276/publications/
+The work was selected as a **DASC 2026 Student Research Competition finalist** (Paper ID 276).
 
-The publication hub groups selected work by research theme and links to versions of record through DOI when available.
+## Public materials
 
-## DASC 2026
+- Project page: https://orbolato.github.io/dasc2026-paper-276/
+- Paper PDF: https://orbolato.github.io/dasc2026-paper-276/paper.pdf
+- Poster: https://orbolato.github.io/dasc2026-paper-276/poster.pdf
+- Presentation slides: https://orbolato.github.io/dasc2026-paper-276/slides.pdf
+- Author publication hub: https://orbolato.github.io/publications/
 
-**Project page:** https://orbolato.github.io/dasc2026-paper-276/
+## Repository scope
 
-Stochastic Strategic Demand-Capacity Balancing Using Model-Free Reinforcement Learning, 45th Digital Avionics Systems Conference (DASC), 2026.
+This repository is primarily a **scholarly publication microsite**, not a standalone reproducibility package. It contains the public paper, poster, presentation slides, and search-engine/scholarly metadata used by the project page.
 
-## Profiles
+If a separate public code/data package for this study is released, it should be linked here explicitly rather than inferred from the website assets.
 
-- ResearchGate: https://www.researchgate.net/profile/Lucas-Carvalho-62
-- GitHub: https://github.com/Orbolato
+## Citation
+
+Machine-readable citation metadata are provided in `CITATION.cff`. When referring to the research results, cite the conference paper rather than the website repository.
+
+## Related work
+
+For the broader research portfolio, including journal articles and companion code repositories, see:
+
+https://orbolato.github.io/publications/
