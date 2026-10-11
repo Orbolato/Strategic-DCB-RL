@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use these conference materials, please cite the associated DASC 2026 paper."
+title: "Stochastic Strategic Demand-Capacity Balancing Using Model-Free Reinforcement Learning"
+type: conference-paper
+authors:
+  - family-names: Carvalho
+    given-names: Lucas Orbolato
+    orcid: "https://orcid.org/0000-0002-8402-5832"
+  - family-names: Murça
+    given-names: Mayara Condé Rocha
+url: "https://orbolato.github.io/dasc2026-paper-276/"
+repository-code: "https://github.com/Orbolato/dasc2026-paper-276"
+preferred-citation:
+  type: conference-paper
+  title: "Stochastic Strategic Demand-Capacity Balancing Using Model-Free Reinforcement Learning"
+  authors:
+    - family-names: Carvalho
+      given-names: Lucas Orbolato
+    - family-names: Murça
+      given-names: Mayara Condé Rocha
+  collection-title: "45th Digital Avionics Systems Conference (DASC)"
+  year: 2026
+  url: "https://orbolato.github.io/dasc2026-paper-276/paper.pdf"
