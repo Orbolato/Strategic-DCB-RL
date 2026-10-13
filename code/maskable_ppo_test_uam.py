@@ -37,8 +37,10 @@ plt.switch_backend('Agg')
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
+import torch
 from torch.distributions import Distribution
 Distribution.set_default_validate_args(False)
+torch.set_num_threads(1)  # single-threaded training: multi-threaded sums would make results depend on the thread count
 
 ###############################################################################
 # Data preprocessing
@@ -623,7 +625,7 @@ all_delays = []  # Collect all imposed delays
 daily_delays = {}  # Store delays per day
 
 # Maskable PPO hyperparameters (Section III-E); the seed also seeds the environment's generator (np_random) at its first reset
-PPO_KWARGS = dict(gamma=1, learning_rate=3e-4, batch_size=64, ent_coef=0.01, clip_range=0.2, seed=0)
+PPO_KWARGS = dict(gamma=1, learning_rate=3e-4, batch_size=64, ent_coef=0.01, clip_range=0.2, seed=0, device='cpu')
 os.makedirs('Results_UAM', exist_ok=True)  # Trained models and result figures
 
 for day in test_days:
