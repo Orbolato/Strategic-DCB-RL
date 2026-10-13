@@ -1,0 +1,13 @@
+# Versions used to produce the results in the paper (Python 3.12.3)
+numpy==2.0.1
+pandas==2.3.3
+scipy==1.16.0
+scikit-learn==1.8.0
+matplotlib==3.9.2
+seaborn==0.13.2
+torch==2.6.0
+gymnasium==1.2.3
+stable-baselines3==2.7.1
+sb3-contrib==2.7.1
+# Rendering (imported by the environment modules)
+pygame==2.6.1

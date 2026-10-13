@@ -1,0 +1,44 @@
+{
+  "EVTOL": {
+    "name": "Generic eVTOL Aircraft",
+    "n_engines": 6,
+    "engine_type": "TS",
+    "mtow": 1500,
+    "oew": 900,
+    "mfc": 0,
+    "engines": [
+      [
+        "EM-Motor-1",
+        80
+      ],
+      [
+        "EM-Motor-2",
+        80
+      ],
+      [
+        "EM-Motor-3",
+        80
+      ],
+      [
+        "EM-Motor-4",
+        80
+      ],
+      [
+        "EM-Motor-5",
+        80
+      ],
+      [
+        "EM-Motor-6",
+        80
+      ]
+    ],
+    "envelop": {
+      "v_min": -49.17,
+      "v_max": 49.17,
+      "vs_min": -2.54,
+      "vs_max": 2.54,
+      "h_max": 610,
+      "d_range_max": 100
+    }
+  }
+}

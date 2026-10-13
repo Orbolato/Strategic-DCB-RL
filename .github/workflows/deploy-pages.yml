@@ -25,6 +25,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Keep the code and data package out of the site
+        run: rm -rf code
+
       - name: Install PDF and WebP tools
         run: |
           sudo apt-get update

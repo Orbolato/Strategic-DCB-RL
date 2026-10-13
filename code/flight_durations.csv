@@ -1,0 +1,6 @@
+origin,destination,route,duration_minutes,num_flights,source
+SBMT,SBGR,SBMT-SBGR,12.09,1,Helicopter Logs
+SBSP,SBGR,SBSP-SBGR,14.15,1,Helicopter Logs
+VP-001,SBGR,VP-001-SBGR,19.18,1,Helicopter Logs
+VP-002,SBGR,VP-002-SBGR,12.68,1,Helicopter Logs
+VP-003,SBGR,VP-003-SBGR,13.78,1,Helicopter Logs
