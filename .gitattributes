@@ -1,0 +1,27 @@
+* text=auto
+
+*.py text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.R text eol=lf
+*.mod text eol=lf
+*.scn text eol=lf
+*.log text eol=lf
+*.csv text eol=lf
+*.html text eol=lf
+*.xml text eol=lf
+*.txt text eol=lf
+
+*.pdf binary
+*.png binary
+*.webp binary
+*.RData binary
+*.Rda binary
+*.zip binary
+
+# Large archival tables are text files, but suppress normal line-by-line diffs.
+code/arrival_time_estimation/arrival_data_with_estimated_times_40.csv -diff
+code/data/arrival_data.csv -diff
+code/data/VRA_*.csv -diff
