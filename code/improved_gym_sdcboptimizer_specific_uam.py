@@ -113,7 +113,7 @@ class RunwayEnv(gym.Env):
     def _select_day(self, chosen_day):
         """Select a day for simulation, either randomly or as specified."""
         if chosen_day is None:
-            chosen_day = np.random.choice(self.days)
+            chosen_day = self.np_random.choice(self.days)
         print(f'Day {chosen_day} chosen.\n')
         return chosen_day
     
@@ -461,9 +461,9 @@ class RunwayEnv(gym.Env):
             self.day_data['wind_state'] = self.day_taf_data['wind_state'].copy()
             
             # Sample initial weather condition and wind state
-            self.day_data.loc[0, 'weather_condition'] = np.random.choice([0, 1, 2], p=self.p_wc_error[self.day_data.loc[0, 'weather_condition']])
+            self.day_data.loc[0, 'weather_condition'] = self.np_random.choice([0, 1, 2], p=self.p_wc_error[self.day_data.loc[0, 'weather_condition']])
             prev_wc = self.day_data.loc[0, 'weather_condition']
-            self.day_data.loc[0, 'wind_state'] = np.random.choice([0, 1, 2, 3], p=self.p_ws_error[self.day_data.loc[0, 'wind_state']])
+            self.day_data.loc[0, 'wind_state'] = self.np_random.choice([0, 1, 2, 3], p=self.p_ws_error[self.day_data.loc[0, 'wind_state']])
             prev_ws = self.day_data.loc[0, 'wind_state']
             
             for step in range(1,len(self.day_data)):
@@ -473,9 +473,9 @@ class RunwayEnv(gym.Env):
                 p_wc = p_wc / np.sum(p_wc)
                 p_ws = self.p_ws_error[self.day_data.loc[step, 'wind_state']] * self.p_ws_trans[prev_ws] + 1e-12
                 p_ws = p_ws / np.sum(p_ws)
-                self.day_data.loc[step, 'weather_condition'] = np.random.choice([0, 1, 2], p=p_wc)
+                self.day_data.loc[step, 'weather_condition'] = self.np_random.choice([0, 1, 2], p=p_wc)
                 prev_wc = self.day_data.loc[step, 'weather_condition']
-                self.day_data.loc[step, 'wind_state'] = np.random.choice([0, 1, 2, 3], p=p_ws)
+                self.day_data.loc[step, 'wind_state'] = self.np_random.choice([0, 1, 2, 3], p=p_ws)
                 prev_ws = self.day_data.loc[step, 'wind_state']
             
         elif mode == 'deploy':
