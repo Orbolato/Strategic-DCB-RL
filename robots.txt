@@ -10,4 +10,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://orbolato.github.io/dasc2026-paper-276/sitemap.xml
+Sitemap: https://orbolato.github.io/Strategic-DCB-RL/sitemap.xml
