@@ -10,6 +10,13 @@ authors:
     given-names: Mayara Condé Rocha
 url: "https://orbolato.github.io/Strategic-DCB-RL/"
 repository-code: "https://github.com/Orbolato/Strategic-DCB-RL"
+keywords:
+  - air traffic flow management
+  - demand-capacity balancing
+  - reinforcement learning
+  - strategic ground delay
+  - urban air mobility
+  - uncertainty
 preferred-citation:
   type: conference-paper
   title: "Stochastic Strategic Demand-Capacity Balancing Using Model-Free Reinforcement Learning"
