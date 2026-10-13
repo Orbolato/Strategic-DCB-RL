@@ -1,0 +1,49 @@
+name: finalize-page-metadata
+
+on:
+  push:
+    branches:
+      - metadata/finalize-publication-page
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: metadata/finalize-publication-page
+          fetch-depth: 0
+
+      - name: Update scholarly metadata and recognition label
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          if '"codeRepository":"https://github.com/Orbolato/Strategic-DCB-RL"' not in s:
+              old = '"url":"https://orbolato.github.io/Strategic-DCB-RL/","encoding"'
+              new = '"url":"https://orbolato.github.io/Strategic-DCB-RL/","codeRepository":"https://github.com/Orbolato/Strategic-DCB-RL","encoding"'
+              if old not in s:
+                  raise SystemExit('JSON-LD insertion marker not found')
+              s = s.replace(old, new, 1)
+          s = s.replace('45th DASC · Best Student Paper Award Finalist · Paper ID 276', '45th DASC · Student Research Competition Finalist · Paper ID 276')
+          s = s.replace('<p class="small">Best Student Paper Award finalist.</p>', '<p class="small">Student Research Competition finalist.</p>')
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Validate and commit
+        run: |
+          git diff --check
+          grep -q 'codeRepository.*Strategic-DCB-RL' index.html
+          grep -q 'Student Research Competition Finalist' index.html
+          if ! git diff --quiet; then
+            git config user.name "Lucas Orbolato Carvalho"
+            git config user.email "40774995+Orbolato@users.noreply.github.com"
+            git add index.html
+            git commit -m "Finalize DASC publication page metadata"
+            git push origin HEAD:metadata/finalize-publication-page
+          fi
