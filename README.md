@@ -8,10 +8,10 @@ The work was selected as a **DASC 2026 Student Research Competition finalist** (
 
 ## Public materials
 
-- Project page: https://orbolato.github.io/dasc2026-paper-276/
-- Paper PDF: https://orbolato.github.io/dasc2026-paper-276/paper.pdf
-- Poster: https://orbolato.github.io/dasc2026-paper-276/poster.pdf
-- Presentation slides: https://orbolato.github.io/dasc2026-paper-276/slides.pdf
+- Project page: https://orbolato.github.io/Strategic-DCB-RL/
+- Paper PDF: https://orbolato.github.io/Strategic-DCB-RL/paper.pdf
+- Poster: https://orbolato.github.io/Strategic-DCB-RL/poster.pdf
+- Presentation slides: https://orbolato.github.io/Strategic-DCB-RL/slides.pdf
 - Author publication hub: https://orbolato.github.io/publications/
 
 ## Repository scope

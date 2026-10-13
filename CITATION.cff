@@ -8,8 +8,8 @@ authors:
     orcid: "https://orcid.org/0000-0002-8402-5832"
   - family-names: Murça
     given-names: Mayara Condé Rocha
-url: "https://orbolato.github.io/dasc2026-paper-276/"
-repository-code: "https://github.com/Orbolato/dasc2026-paper-276"
+url: "https://orbolato.github.io/Strategic-DCB-RL/"
+repository-code: "https://github.com/Orbolato/Strategic-DCB-RL"
 preferred-citation:
   type: conference-paper
   title: "Stochastic Strategic Demand-Capacity Balancing Using Model-Free Reinforcement Learning"
@@ -20,4 +20,4 @@ preferred-citation:
       given-names: Mayara Condé Rocha
   collection-title: "45th Digital Avionics Systems Conference (DASC)"
   year: 2026
-  url: "https://orbolato.github.io/dasc2026-paper-276/paper.pdf"
+  url: "https://orbolato.github.io/Strategic-DCB-RL/paper.pdf"
