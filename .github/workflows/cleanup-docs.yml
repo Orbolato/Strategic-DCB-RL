@@ -2,7 +2,8 @@ name: cleanup-docs
 
 on:
   push:
-    branches: [add-code-and-data]
+    branches:
+      - add-code-and-data
 
 permissions:
   contents: write
@@ -11,77 +12,58 @@ jobs:
   patch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out branch
+        uses: actions/checkout@v4
         with:
           ref: add-code-and-data
           fetch-depth: 0
 
-      - name: Tighten provenance and reproducibility wording
-        shell: python
+      - name: Tighten remaining provenance wording
         run: |
+          python - <<'PY'
           from pathlib import Path
-
-          path = Path("code/README.md")
-          text = path.read_text(encoding="utf-8")
-          replacements = {
-              "This folder includes every input the experiments need. The steps below rebuild them.":
-                  "This folder includes every input needed by the two main experiment scripts. The steps below describe optional upstream regeneration. Some source records needed to rebuild every processed input from first principles are intentionally excluded; see `../PROVENANCE.md` and `data/README.md`.",
-              "The generator draws daily totals, slots and flight origins at random (`RANDOM_SEED` in the script). The shipped\nfiles hold the demand draw used in the experiments; a new run produces a different draw.":
-                  "The generator samples daily totals, slots and flight origins pseudo-randomly using the fixed `RANDOM_SEED` in the script. The shipped files preserve the draw used in the experiments. With the same inputs, code path and NumPy behavior, the fixed seed is intended to reproduce that draw; the archived CSVs remain the canonical experiment inputs.",
-              "| `data/data.csv`, `data/new_taf_list.csv`, `data/std_taf.csv` | METAR/TAF from REDEMET (DECEA); demand from ANAC SIROS/VRA and Flightradar24 tracks | Processed 15-min aggregates, 2022-01-02 to 2023-12-30 |":
-                  "| `data/data.csv`, `data/new_taf_list.csv`, `data/std_taf.csv` | METAR/TAF from REDEMET (DECEA); ANAC SIROS/VRA traffic; aggregate historical Flightradar24-derived quantities used upstream | Processed 15-min tables, 2022-01-02 to 2023-12-30. No raw or flight-level Flightradar24 track file is distributed. |",
-              "| `data/arrival_data.csv`, `arrival_time_estimation/arrival_data_with_estimated_times_40.csv` | ANAC SIROS/VRA; 40/100 NM times from Flightradar24 tracks | Flight level, 235,075 arrivals |":
-                  "| `data/arrival_data.csv`, `arrival_time_estimation/arrival_data_with_estimated_times_40.csv` | ANAC SIROS/VRA flight-level rows; 40-NM timing uses an aggregate historical transit-time statistic | Flight level, 235,075 arrivals. No per-flight Flightradar24 row is redistributed. |",
-              "| `data/CGNA_MEDIDAS_ATFM_*.csv` | CGNA ATFM measures | Used only for descriptive plots |":
-                  "| `data/CGNA_MEDIDAS_ATFM_*.csv` | CGNA ATFM measures | Traffic-management-measure records used by the conventional-case analysis; not a flight movement database. |",
-          }
-          for old, new in replacements.items():
-              if old not in text:
-                  raise RuntimeError(f"Expected code/README.md text not found: {old[:80]}")
-              text = text.replace(old, new, 1)
-          path.write_text(text, encoding="utf-8")
 
           path = Path("code/generate_uam_synthetic_data_bimtra_based.py")
           text = path.read_text(encoding="utf-8")
           old = "3. Applies both distributions deterministically (no randomness added)"
           new = "3. Samples daily totals and 15-minute slots from those empirical distributions with a fixed NumPy seed"
-          if old not in text:
-              raise RuntimeError("Generator docstring marker not found")
-          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          if old in text:
+              text = text.replace(old, new, 1)
+              path.write_text(text, encoding="utf-8")
 
           path = Path("code/preprocessing/README.md")
           text = path.read_text(encoding="utf-8")
-          appendix = """
-
-## Provenance boundary
-
-The retained preprocessing scripts reference raw Flightradar24 workspaces because those were used historically to derive aggregate quantities. No raw or flight-level Flightradar24 track file is included in this repository. The public experiment package distributes the archived processed inputs instead.
-
-`../data/data.csv` is the authoritative archived input for rerunning the Python experiment. The current `R/generate_sbgr_data.R` script excludes operational days 2023-04-24 through 2023-04-28, whereas the archived CSV contains those days. The available repository history does not establish when or why that exclusion was introduced, so this folder is documented as reference-only rather than an exact raw-to-processed reconstruction recipe.
-"""
           if "## Provenance boundary" not in text:
-              text = text.rstrip() + appendix + "\n"
-          path.write_text(text, encoding="utf-8")
+              text = text.rstrip() + """
+
+          ## Provenance boundary
+
+          The retained preprocessing scripts reference raw Flightradar24 workspaces because those were used historically to derive aggregate quantities. No raw or flight-level Flightradar24 track file is included in this repository. The public experiment package distributes the archived processed inputs instead.
+
+          `../data/data.csv` is the authoritative archived input for rerunning the Python experiment. The current `R/generate_sbgr_data.R` script excludes operational days 2023-04-24 through 2023-04-28, whereas the archived CSV contains those days. The available repository history does not establish when or why that exclusion was introduced, so this folder is documented as reference-only rather than an exact raw-to-processed reconstruction recipe.
+          """
+              path.write_text(text + "\n", encoding="utf-8")
 
           path = Path("index.html")
           text = path.read_text(encoding="utf-8")
-          marker = '"url":"https://orbolato.github.io/Strategic-DCB-RL/","encoding"'
-          replacement = '"url":"https://orbolato.github.io/Strategic-DCB-RL/","codeRepository":"https://github.com/Orbolato/Strategic-DCB-RL","encoding"'
-          if marker not in text:
-              raise RuntimeError("ScholarlyArticle JSON-LD marker not found")
-          path.write_text(text.replace(marker, replacement, 1), encoding="utf-8")
+          if '"codeRepository":"https://github.com/Orbolato/Strategic-DCB-RL"' not in text:
+              marker = '"url":"https://orbolato.github.io/Strategic-DCB-RL/","encoding"'
+              replacement = '"url":"https://orbolato.github.io/Strategic-DCB-RL/","codeRepository":"https://github.com/Orbolato/Strategic-DCB-RL","encoding"'
+              if marker not in text:
+                  raise RuntimeError("ScholarlyArticle JSON-LD marker not found")
+              path.write_text(text.replace(marker, replacement, 1), encoding="utf-8")
+          PY
 
-      - name: Validate patch
+      - name: Validate and commit
         run: |
           git diff --check
+          grep -q 'fixed NumPy seed' code/generate_uam_synthetic_data_bimtra_based.py
+          grep -q '## Provenance boundary' code/preprocessing/README.md
           grep -q 'codeRepository.*Strategic-DCB-RL' index.html
-          grep -q 'No per-flight Flightradar24 row is redistributed' code/README.md
-          grep -q 'current `R/generate_sbgr_data.R` script excludes' code/preprocessing/README.md
-
-      - name: Commit cleanup
-        run: |
-          git config user.name "Lucas Orbolato Carvalho"
-          git config user.email "40774995+Orbolato@users.noreply.github.com"
-          git add code/README.md code/generate_uam_synthetic_data_bimtra_based.py code/preprocessing/README.md index.html
-          git commit -m "Clarify provenance and reproducibility boundaries"
-          git push origin HEAD:add-code-and-data
+          if ! git diff --quiet; then
+            git config user.name "Lucas Orbolato Carvalho"
+            git config user.email "40774995+Orbolato@users.noreply.github.com"
+            git add code/generate_uam_synthetic_data_bimtra_based.py code/preprocessing/README.md index.html
+            git commit -m "Clarify provenance and structured metadata"
+            git push origin HEAD:add-code-and-data
+          fi
