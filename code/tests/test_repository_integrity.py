@@ -80,12 +80,16 @@ class RepositoryIntegrityTests(unittest.TestCase):
         self.assertEqual(rows, 66816)
         self.assertEqual(len(days), 696)
         self.assertTrue(all(count == 96 for count in days.values()))
+
+        # The archived CSV stores operational-day labels without zero padding.
+        # These five days are present in the archived input even though the
+        # retained historical R script currently excludes them.
         for day in (
-            "2023-04-24",
-            "2023-04-25",
-            "2023-04-26",
-            "2023-04-27",
-            "2023-04-28",
+            "2023-4-24",
+            "2023-4-25",
+            "2023-4-26",
+            "2023-4-27",
+            "2023-4-28",
         ):
             self.assertEqual(days[day], 96)
 
