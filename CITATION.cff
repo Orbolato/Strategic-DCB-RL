@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use these conference materials, please cite the associated DASC 2026 paper."
+message: "If you use these materials, code or data, please cite the associated DASC 2026 paper."
 title: "Stochastic Strategic Demand-Capacity Balancing Using Model-Free Reinforcement Learning"
 type: conference-paper
 authors:
@@ -10,6 +10,13 @@ authors:
     given-names: Mayara Condé Rocha
 url: "https://orbolato.github.io/Strategic-DCB-RL/"
 repository-code: "https://github.com/Orbolato/Strategic-DCB-RL"
+keywords:
+  - air traffic flow management
+  - demand-capacity balancing
+  - reinforcement learning
+  - strategic ground delay
+  - urban air mobility
+  - uncertainty
 preferred-citation:
   type: conference-paper
   title: "Stochastic Strategic Demand-Capacity Balancing Using Model-Free Reinforcement Learning"

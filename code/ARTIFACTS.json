@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "description": "Principal archived study inputs pinned by Git blob identity and byte size. These anchors support integrity verification; they are not a claim that every upstream source can be regenerated from the public repository.",
+  "artifacts": [
+    {
+      "path": "code/data/data.csv",
+      "git_blob": "5660ea374ddd186dff838907a8b76ec20c0f0472",
+      "bytes": 12941540
+    },
+    {
+      "path": "code/data/new_taf_list.csv",
+      "git_blob": "61b4ead4316413a0d939700632657b6a7d02c8cd",
+      "bytes": 6427960
+    },
+    {
+      "path": "code/data/std_taf.csv",
+      "git_blob": "f747e78347f78ab230dd593b58f4812e42a60fff",
+      "bytes": 6454204
+    },
+    {
+      "path": "code/data/arrival_data.csv",
+      "git_blob": "6f0108098cae83438b9f71a5d14d32c73f103c7e",
+      "bytes": 64967425
+    },
+    {
+      "path": "code/arrival_time_estimation/arrival_data_with_estimated_times_40.csv",
+      "git_blob": "2ff08d5d2901bed385b82c3b8aea6310d6a28303",
+      "bytes": 92084286
+    },
+    {
+      "path": "code/data/VRA_2022.csv",
+      "git_blob": "f1bf0055f184a611451efb7b8db4d5125c93e3f9",
+      "bytes": 15053567
+    },
+    {
+      "path": "code/data/VRA_2023.csv",
+      "git_blob": "80147b1e124071240e75ad87b1dd36d5a864a7e5",
+      "bytes": 16939870
+    },
+    {
+      "path": "code/data/VRA_2024.csv",
+      "git_blob": "a87dfb952989924a5f28ba0b5352638c28a0401e",
+      "bytes": 17724593
+    },
+    {
+      "path": "code/data/CGNA_MEDIDAS_ATFM_20180101_20231121_processed.csv",
+      "git_blob": "77859f14d90854e2f9114cecc694b1afeba39fa4",
+      "bytes": 697929
+    },
+    {
+      "path": "code/data_uam.csv",
+      "git_blob": "850bf07675c2422061e3c2f592a817de00f9d5ef",
+      "bytes": 7203983
+    },
+    {
+      "path": "code/arrival_data_uam.csv",
+      "git_blob": "c18e6a9e8cbab65cacc02dd0c8a138d96e079268",
+      "bytes": 9591300
+    },
+    {
+      "path": "code/new_taf_list_uam.csv",
+      "git_blob": "0f4f1493fac8f81c7e068e5df3d29a6ec574db57",
+      "bytes": 6554177
+    },
+    {
+      "path": "code/flight_durations.csv",
+      "git_blob": "03b2319342758dd4704fde377362004c94d03b09",
+      "bytes": 293
+    },
+    {
+      "path": "code/profile_implementation/routes_uam_detailed_rmsp.csv",
+      "git_blob": "5352704cb96d7fb21ae6ccae1c485a63b9f72128",
+      "bytes": 12816
+    }
+  ]
+}
