@@ -1,0 +1,68 @@
+name: update-renamed-repo-refs
+
+on:
+  push:
+    branches: [maintenance/update-renamed-repo-refs]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: maintenance/update-renamed-repo-refs
+          fetch-depth: 0
+
+      - name: Update repository and Pages references
+        shell: python
+        run: |
+          from pathlib import Path
+
+          files = [
+              Path("README.md"),
+              Path("CITATION.cff"),
+              Path("index.html"),
+              Path("robots.txt"),
+              Path("sitemap.xml"),
+          ]
+          replacements = {
+              "https://github.com/Orbolato/dasc2026-paper-276": "https://github.com/Orbolato/Strategic-DCB-RL",
+              "https://orbolato.github.io/dasc2026-paper-276/": "https://orbolato.github.io/Strategic-DCB-RL/",
+          }
+
+          total = 0
+          for path in files:
+              text = path.read_text(encoding="utf-8")
+              before = text
+              for old, new in replacements.items():
+                  text = text.replace(old, new)
+              if text != before:
+                  path.write_text(text, encoding="utf-8")
+                  count = sum(before.count(old) for old in replacements)
+                  print(f"updated {path}: {count} reference(s)")
+                  total += count
+
+          if total == 0:
+              raise RuntimeError("No legacy repository/Page references were found")
+
+          remaining = []
+          for path in files:
+              text = path.read_text(encoding="utf-8")
+              if "dasc2026-paper-276" in text:
+                  remaining.append(str(path))
+          if remaining:
+              raise RuntimeError(f"Legacy references remain in: {remaining}")
+
+      - name: Validate diff
+        run: git diff --check
+
+      - name: Commit updated references
+        run: |
+          git config user.name "Lucas Orbolato Carvalho"
+          git config user.email "40774995+Orbolato@users.noreply.github.com"
+          git add README.md CITATION.cff index.html robots.txt sitemap.xml
+          git commit -m "Update references after repository rename"
+          git push origin HEAD:maintenance/update-renamed-repo-refs
