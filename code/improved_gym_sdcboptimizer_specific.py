@@ -278,14 +278,14 @@ class RunwayEnv(gym.Env):
 
         if not evaluate:
 
-            # Calculate queue penalties (negative reward based on squared queue lengths, Eq. 21)
-            queue_penalty = -(self.alpha * a_t**2 + d_t**2)
+            # Calculate queue penalties (negative reward, linear in the queue lengths)
+            queue_penalty = -(self.alpha * a_t + d_t)
             if record:
                 self.queue_cost -= queue_penalty
 
             # Calculate switch penalty if configuration changed
             # Only penalize switches when there are aircraft in the queue
-            switch_penalty = -config_switch * self.delta * (self.alpha * a_prev**2 + d_prev**2)
+            switch_penalty = -config_switch * self.delta * (self.alpha * a_prev + d_prev)
             if record:
                 self.switch_cost -= switch_penalty
         
