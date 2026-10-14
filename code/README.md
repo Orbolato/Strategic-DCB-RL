@@ -107,7 +107,7 @@ The committed CSVs are the canonical experiment inputs. The implementation fixes
 | Wind limits | crosswind ≤ 20 kt, tailwind ≤ 5 kt; for UAM, applied to the two vertiport sides |
 | Weather probabilities (Eqs. 14, 16) | METAR transitions between consecutive slots and TAF/METAR pairs from all days except the test days |
 | RCCE percentile (Case 1) | VMC 0.99, IMC 0.95, LIMC 0.90 |
-| PPO | `sb3_contrib.MaskablePPO("MlpPolicy")` with γ = 1, learning rate 3e-4, batch 64, entropy coefficient 0.01, clip 0.2, seed 0 (it also seeds the environment's weather sampler, Gymnasium's `np_random`, at the first reset), trained on the CPU with one thread so that reruns with the same seed and software stack give identical policies; other settings follow sb3-contrib 2.7.1 defaults used by the archived environment |
+| PPO | `sb3_contrib.MaskablePPO("MlpPolicy")` with γ = 1, learning rate 3e-4, batch 64, entropy coefficient 0 (the library default, as in the original experiments), clip 0.2, seed 0 (it also seeds the environment's weather sampler, Gymnasium's `np_random`, at the first reset), trained on the CPU with one thread so that reruns with the same seed and software stack give identical policies; other settings follow sb3-contrib 2.7.1 defaults used by the archived environment |
 
 ## Figures and tables
 
