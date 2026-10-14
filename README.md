@@ -27,6 +27,8 @@ This repository has two parts:
 
 The public package contains the canonical inputs needed by the two main experiment scripts, but it does **not** contain archived trained policies. The scripts therefore retrain policies when no saved model is present. A fixed PPO seed is documented in the code, but exact equality of newly trained neural-network weights or reported numerical outputs is not guaranteed across operating systems, hardware, or library builds.
 
+**Implementation note.** The experiment implementation used the sb3-contrib default entropy coefficient of 0 and linear queue/configuration-switch penalties during PPO training. The quadratic queue-based formulation was used for evaluation and reported operational costs. These implementation details differ from the corresponding PPO/reward specifications reported in the conference paper; the repository preserves the settings actually used to generate the experimental results.
+
 Some upstream reconstruction paths require source material that is intentionally not redistributed. In particular, raw BIMTRA movement records and raw Flightradar24 track files are excluded. The shipped experiment inputs remain usable without those restricted/external raw records. See [`PROVENANCE.md`](PROVENANCE.md) and [`code/data/README.md`](code/data/README.md) for the detailed boundary.
 
 ## Citation
