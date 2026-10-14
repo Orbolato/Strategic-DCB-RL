@@ -1528,7 +1528,7 @@ all_delays = []  # Collect all imposed delays
 daily_delays = {}  # Store delays per day
 
 # Maskable PPO hyperparameters (Section III-E); the seed also seeds the environment's generator (np_random) at its first reset
-PPO_KWARGS = dict(gamma=1, learning_rate=3e-4, batch_size=64, ent_coef=0.01, clip_range=0.2, seed=0, device='cpu')
+PPO_KWARGS = dict(gamma=1, learning_rate=3e-4, batch_size=64, ent_coef=0.0, clip_range=0.2, seed=0, device='cpu')  # ent_coef: library default, as in the original experiments
 os.makedirs('Results', exist_ok=True)  # Trained models and result figures
 
 for day in test_days:
