@@ -46,7 +46,7 @@ torch.set_num_threads(1)  # single-threaded training: multi-threaded sums would 
 ###############################################################################
 
 import argparse
-_parser = argparse.ArgumentParser(description='Strategic DCB experiment, case 1: SBGR conventional ATM')
+_parser = argparse.ArgumentParser(description='Strategic DCB experiment, case 1: conventional ATM at SBGR')
 _parser.add_argument('--setting', choices=['S1', 'S2'], default='S1',
                      help='S1 (default): entropy coefficient 0 and queue/configuration-switch training penalties linear '
                           'in the queue lengths; S2: entropy coefficient 0.01 and quadratic-form training penalties '

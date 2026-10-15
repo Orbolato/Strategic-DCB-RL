@@ -20,7 +20,7 @@ For data lineage, redistribution boundaries and the distinction between experime
 
 ```text
 code/
-├── maskable_ppo_test.py                       # Case 1 (SBGR conventional ATM): preprocessing, training, evaluation, figures
+├── maskable_ppo_test.py                       # Case 1 (conventional ATM at SBGR): preprocessing, training, evaluation, figures
 ├── maskable_ppo_test_uam.py                   # Case 2 (UAM): preprocessing, training, evaluation, figures
 ├── improved_gym_sdcboptimizer_specific.py     # Gymnasium environment, conventional ATM
 ├── improved_gym_sdcboptimizer_specific_uam.py # Gymnasium environment, UAM
@@ -76,7 +76,7 @@ On Windows:
 Run the scripts **from this `code/` folder**. Paths in the historical scripts are relative to it.
 
 ```bash
-python maskable_ppo_test.py       # Case 1: SBGR conventional ATM (Tables I-II, Figs. 3, 9-12)
+python maskable_ppo_test.py       # Case 1: conventional ATM at SBGR (Tables I-II, Figs. 3, 9-12)
 python maskable_ppo_test_uam.py   # Case 2: UAM (Tables III-IV, Figs. 13-16)
 ```
 
