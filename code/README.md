@@ -80,7 +80,7 @@ python maskable_ppo_test.py       # Case 1: SBGR conventional ATM (Tables I-II, 
 python maskable_ppo_test_uam.py   # Case 2: UAM (Tables III-IV, Figs. 13-16)
 ```
 
-For each of the 30 test days, the scripts train a Maskable PPO model and save it, with result figures, to `Results/` (Case 1) or `Results_UAM/` (Case 2). A model already present there is loaded instead of retrained. No trained policy files are committed to this repository, so a fresh clone performs training on the first full run.
+For each of the 30 test days, the scripts train a Maskable PPO model and save it, with result figures, to `Results/` (Case 1) or `Results_UAM/` (Case 2) with the default options (see [Training settings and the forecast check](#training-settings-and-the-forecast-check) for the others). A model already present there is loaded instead of retrained. No trained policy files are committed to this repository, so a fresh clone performs training on the first full run.
 
 Training uses 500,000 timesteps per day for Case 1 and 300,000 per day for Case 2. In the original environment, this was approximately 1 hour per day for Case 1 and 40 minutes per day for Case 2 on one Intel i7-9700KF core. The days are independent and can be trained separately. These timings are historical measurements, not performance guarantees.
 
@@ -90,7 +90,26 @@ Each day is evaluated three ways:
 - **Deploy**: policy selects delays deterministically using forecast weather (TAF).
 - **Test**: those delays are replayed under observed weather (METAR), giving the reported tactical cost.
 
-The console prints the statistics used in Tables I/III (`[1] DESCRIPTIVE STATISTICS`), the delay distribution used in Tables II/IV (`ALLOCATED DELAYS DISTRIBUTION ANALYSIS`), and the Wilcoxon signed-rank test. A final section also performs a stochastic-weather evaluation on five days that is not reported in the paper.
+The console prints the statistics used in Tables I/III (`[1] DESCRIPTIVE STATISTICS`), the delay distribution used in Tables II/IV (`ALLOCATED DELAYS DISTRIBUTION ANALYSIS`), and the Wilcoxon signed-rank test. A final section also performs a stochastic-weather evaluation on five days that is not reported in the paper; it always evaluates the policy alone, without the forecast check.
+
+### Training settings and the forecast check
+
+Both scripts accept two options, which select one of two training settings and add an optional check at deployment:
+
+| Option | Effect |
+|---|---|
+| `--setting S1` (default) | Entropy coefficient 0 and a training reward linear in the queue lengths: the settings of the original experiments. Models in `Results/` (`Results_UAM/` for Case 2). |
+| `--setting S2` | Entropy coefficient 0.01 and the quadratic evaluation cost as training reward: the PPO and reward settings stated in the paper. Models in `Results_S2/` (`Results_UAM_S2/`). |
+| `--forecast-check` | After the deployment on the forecast, the day is simulated on the same forecast (TAF) without the policy's delays. The delays are kept only if they reduce the forecast tactical cost; otherwise the original schedule is kept, and the test replays it. The check uses only the information available when the delays are decided and needs no retraining: the models of the selected setting are reused. Figures go to a separate folder (`Results_check/`, `Results_S2_check/`, `Results_UAM_check/`, `Results_UAM_S2_check/`), and the console adds a `FORECAST CHECK` section with the decision for each day. |
+
+```bash
+python maskable_ppo_test.py                                 # S1, delays deployed directly (default)
+python maskable_ppo_test.py --forecast-check                # S1 with the forecast check
+python maskable_ppo_test.py --setting S2                    # S2, delays deployed directly
+python maskable_ppo_test.py --setting S2 --forecast-check   # S2 with the forecast check
+```
+
+The same options apply to `maskable_ppo_test_uam.py`. The training reward is selected by the `training_reward` argument of `RunwayEnv` (`'linear'` by default, or `'quadratic'`); the reported tactical costs always use the quadratic evaluation cost.
 
 ### Reproducibility boundary
 
@@ -107,7 +126,8 @@ The committed CSVs are the canonical experiment inputs. The implementation fixes
 | Wind limits | crosswind ≤ 20 kt, tailwind ≤ 5 kt; for UAM, applied to the two vertiport sides |
 | Weather probabilities (Eqs. 14, 16) | METAR transitions between consecutive slots and TAF/METAR pairs from all days except the test days |
 | RCCE percentile (Case 1) | VMC 0.99, IMC 0.95, LIMC 0.90 |
-| PPO | `sb3_contrib.MaskablePPO("MlpPolicy")` with γ = 1, learning rate 3e-4, batch 64, entropy coefficient 0 (the library default, as in the original experiments), clip 0.2, seed 0 (it also seeds the environment's weather sampler, Gymnasium's `np_random`, at the first reset), trained on the CPU with one thread so that reruns with the same seed and software stack give identical policies; other settings follow sb3-contrib 2.7.1 defaults used by the archived environment |
+| Training reward | Queue and configuration-switch penalties linear in the queue lengths (setting S1, default) or quadratic, as in the evaluation cost (setting S2); the reported costs always use the quadratic evaluation cost |
+| PPO | `sb3_contrib.MaskablePPO("MlpPolicy")` with γ = 1, learning rate 3e-4, batch 64, entropy coefficient 0 in setting S1 (the library default, as in the original experiments) or 0.01 in setting S2, clip 0.2, seed 0 (it also seeds the environment's weather sampler, Gymnasium's `np_random`, at the first reset), trained on the CPU with one thread so that reruns with the same seed and software stack give identical policies; other settings follow sb3-contrib 2.7.1 defaults used by the archived environment |
 
 ## Figures and tables
 
