@@ -66,8 +66,8 @@ class RunwayEnv(gym.Env):
         render_mode : str, optional
             Rendering mode, one of None, "human", or "rgb_array"
         training_reward : str, optional
-            Queue and switch penalties of the training reward: 'linear' in the queue lengths (default, as in the
-            original experiments) or 'quadratic', the form of the cost used for evaluation
+            Queue and switch penalties of the training reward: 'linear' in the queue lengths (default) or
+            'quadratic', the structure of the evaluation cost without its factor of 45
         """
         self._init_rendering(render_mode = render_mode)
         self.window_size = 512  # Size of PyGame window

@@ -48,9 +48,9 @@ torch.set_num_threads(1)  # single-threaded training: multi-threaded sums would 
 import argparse
 _parser = argparse.ArgumentParser(description='Strategic DCB experiment, case 1: SBGR conventional ATM')
 _parser.add_argument('--setting', choices=['S1', 'S2'], default='S1',
-                     help='S1 (default): entropy coefficient 0 and linear training reward, the settings of the '
-                          'original experiments; S2: entropy coefficient 0.01 and the quadratic evaluation cost as '
-                          'training reward, the settings stated in the paper')
+                     help='S1 (default): entropy coefficient 0 and queue/configuration-switch training penalties linear '
+                          'in the queue lengths; S2: entropy coefficient 0.01 and quadratic-form training penalties '
+                          '(the structure of the evaluation cost, without its factor of 45)')
 _parser.add_argument('--forecast-check', action='store_true',
                      help="keep each day's ground delays only if they reduce the tactical cost of the day on the "
                           'forecast (TAF); otherwise keep the original schedule')
@@ -1562,7 +1562,7 @@ daily_delays = {}  # Store delays per day
 check_log = []  # Forecast check decisions per day
 
 # Maskable PPO hyperparameters (Section III-E); the seed also seeds the environment's generator (np_random) at its first reset
-PPO_KWARGS = dict(gamma=1, learning_rate=3e-4, batch_size=64, ent_coef=ENT_COEF, clip_range=0.2, seed=0, device='cpu')  # ENT_COEF: 0 in setting S1 (library default, as in the original experiments), 0.01 in S2
+PPO_KWARGS = dict(gamma=1, learning_rate=3e-4, batch_size=64, ent_coef=ENT_COEF, clip_range=0.2, seed=0, device='cpu')  # ENT_COEF: 0 in setting S1 (library default), 0.01 in S2
 os.makedirs(MODEL_DIR, exist_ok=True)  # Trained models
 os.makedirs(OUT_DIR, exist_ok=True)  # Result figures
 
