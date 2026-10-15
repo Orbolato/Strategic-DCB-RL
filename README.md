@@ -21,7 +21,7 @@ The work was selected as a **DASC 2026 Student Research Competition finalist** (
 This repository has two parts:
 
 - **Project page** (repository root): the public paper, poster, presentation slides, and scholarly metadata used by the website. It is deployed to GitHub Pages by `.github/workflows/deploy-pages.yml`.
-- **Code and data** ([`code/`](code/)): the reinforcement-learning environments, experiment scripts, canonical processed inputs, and data-preparation pipelines for both case studies (SBGR conventional operations and UAM). The `code/` folder is intentionally excluded from the deployed website artifact.
+- **Code and data** ([`code/`](code/)): the reinforcement-learning environments, experiment scripts, canonical processed inputs, and data-preparation pipelines for both case studies (conventional ATM at SBGR and UAM). The `code/` folder is intentionally excluded from the deployed website artifact.
 
 ## Reproducibility scope
 
