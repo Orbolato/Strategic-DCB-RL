@@ -98,9 +98,9 @@ Both scripts accept two options, which select one of two training settings and a
 
 | Option | Effect |
 |---|---|
-| `--setting S1` (default) | Entropy coefficient 0 and a training reward linear in the queue lengths: the settings of the original experiments. Models in `Results/` (`Results_UAM/` for Case 2). |
-| `--setting S2` | Entropy coefficient 0.01 and the quadratic evaluation cost as training reward: the PPO and reward settings stated in the paper. Models in `Results_S2/` (`Results_UAM_S2/`). |
-| `--forecast-check` | After the deployment on the forecast, the day is simulated on the same forecast (TAF) without the policy's delays. The delays are kept only if they reduce the forecast tactical cost; otherwise the original schedule is kept, and the test replays it. The check uses only the information available when the delays are decided and needs no retraining: the models of the selected setting are reused. Figures go to a separate folder (`Results_check/`, `Results_S2_check/`, `Results_UAM_check/`, `Results_UAM_S2_check/`), and the console adds a `FORECAST CHECK` section with the decision for each day. |
+| `--setting S1` (default) | Entropy coefficient 0 and a training reward linear in the queue lengths. Models in `Results/` (`Results_UAM/` for Case 2). |
+| `--setting S2` | Entropy coefficient 0.01 and a quadratic-form queue/configuration-switch training reward. It has the same quadratic structure as the tactical evaluation objective but does not include the evaluation-time factor of 45. Models in `Results_S2/` (`Results_UAM_S2/`). |
+| `--forecast-check` | After the deployment on the forecast, the day is simulated on the same forecast (TAF) without the policy's delays. The delays are kept only if they reduce the forecast tactical cost; otherwise the original schedule is kept, and the test replays it. The check uses only the information available when the delays are decided and needs no retraining: the models of the selected setting are reused. Figures go to a separate folder (`Results_check/`, `Results_S2_check/`, `Results_UAM_check/`, `Results_UAM_S2_check/`), and the console adds a `FORECAST CHECK` section with the decision for each day. The per-day `sdcb_ppo_policy_<day>.pdf` figure shows the policy's pre-check proposal; when the proposal is rejected, zero strategic delays are used in the METAR test and in the aggregate delay statistics. |
 
 ```bash
 python maskable_ppo_test.py                                 # S1, delays deployed directly (default)
@@ -126,8 +126,8 @@ The committed CSVs are the canonical experiment inputs. The implementation fixes
 | Wind limits | crosswind ≤ 20 kt, tailwind ≤ 5 kt; for UAM, applied to the two vertiport sides |
 | Weather probabilities (Eqs. 14, 16) | METAR transitions between consecutive slots and TAF/METAR pairs from all days except the test days |
 | RCCE percentile (Case 1) | VMC 0.99, IMC 0.95, LIMC 0.90 |
-| Training reward | Queue and configuration-switch penalties linear in the queue lengths (setting S1, default) or quadratic, as in the evaluation cost (setting S2); the reported costs always use the quadratic evaluation cost |
-| PPO | `sb3_contrib.MaskablePPO("MlpPolicy")` with γ = 1, learning rate 3e-4, batch 64, entropy coefficient 0 in setting S1 (the library default, as in the original experiments) or 0.01 in setting S2, clip 0.2, seed 0 (it also seeds the environment's weather sampler, Gymnasium's `np_random`, at the first reset), trained on the CPU with one thread so that reruns with the same seed and software stack give identical policies; other settings follow sb3-contrib 2.7.1 defaults used by the archived environment |
+| Training reward | Queue and configuration-switch penalties are linear in the queue lengths in setting S1 (default) and quadratic in setting S2. The reported tactical cost uses the quadratic evaluation objective with its evaluation-time scaling. |
+| PPO | `sb3_contrib.MaskablePPO("MlpPolicy")` with γ = 1, learning rate 3e-4, batch 64, entropy coefficient 0 in setting S1 or 0.01 in setting S2, clip 0.2, seed 0 (it also seeds the environment's weather sampler, Gymnasium's `np_random`, at the first reset), trained on the CPU with one thread so that reruns with the same seed and software stack give identical policies; other settings follow sb3-contrib 2.7.1 defaults used by the archived environment |
 
 ## Figures and tables
 
