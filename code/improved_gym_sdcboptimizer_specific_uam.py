@@ -27,7 +27,7 @@ class RunwayEnv(gym.Env):
                  observation_low, observation_high,
                  p_wc_trans, p_ws_trans,
                  p_wc_error, p_ws_error,
-                 chosen_day=None, render_mode=None):
+                 chosen_day=None, render_mode=None, training_reward='linear'):
         """
         Initialize the runway environment.
         
@@ -65,6 +65,9 @@ class RunwayEnv(gym.Env):
             Specific day to simulate, or random if None
         render_mode : str, optional
             Rendering mode, one of None, "human", or "rgb_array"
+        training_reward : str, optional
+            Queue and switch penalties of the training reward: 'linear' in the queue lengths (default, as in the
+            original experiments) or 'quadratic', the form of the cost used for evaluation
         """
         self._init_rendering(render_mode = render_mode)
         self.window_size = 512  # Size of PyGame window
@@ -100,6 +103,9 @@ class RunwayEnv(gym.Env):
         self.beta = beta
         self.delta = delta
         self.eta = eta
+        if training_reward not in ('linear', 'quadratic'):
+            raise ValueError("training_reward must be 'linear' or 'quadratic'")
+        self.training_reward = training_reward
         
         # Select day if not provided
         self.day = self._select_day(chosen_day)
@@ -291,14 +297,16 @@ class RunwayEnv(gym.Env):
 
         if not evaluate:
 
-            # Calculate queue penalties (negative reward, linear in the queue lengths)
-            queue_penalty = -(self.alpha * a_t + d_t)
+            # Calculate queue penalties (negative reward, linear in the queue lengths; squared with
+            # training_reward='quadratic', the form of the evaluation cost below)
+            power = 2 if self.training_reward == 'quadratic' else 1
+            queue_penalty = -(self.alpha * a_t**power + d_t**power)
             if record:
                 self.queue_cost -= queue_penalty
 
             # Calculate switch penalty if configuration changed
             # Only penalize switches when there are aircraft in the queue
-            switch_penalty = -config_switch * self.delta * (self.alpha * a_prev + d_prev)
+            switch_penalty = -config_switch * self.delta * (self.alpha * a_prev**power + d_prev**power)
             if record:
                 self.switch_cost -= switch_penalty
         

@@ -42,6 +42,28 @@ Distribution.set_default_validate_args(False)
 torch.set_num_threads(1)  # single-threaded training: multi-threaded sums would make results depend on the thread count
 
 ###############################################################################
+# Training setting and deployment variant (command-line options, see README.md)
+###############################################################################
+
+import argparse
+_parser = argparse.ArgumentParser(description='Strategic DCB experiment, case 1: SBGR conventional ATM')
+_parser.add_argument('--setting', choices=['S1', 'S2'], default='S1',
+                     help='S1 (default): entropy coefficient 0 and linear training reward, the settings of the '
+                          'original experiments; S2: entropy coefficient 0.01 and the quadratic evaluation cost as '
+                          'training reward, the settings stated in the paper')
+_parser.add_argument('--forecast-check', action='store_true',
+                     help="keep each day's ground delays only if they reduce the tactical cost of the day on the "
+                          'forecast (TAF); otherwise keep the original schedule')
+_args, _ = _parser.parse_known_args()
+SETTING, FORECAST_CHECK = _args.setting, _args.forecast_check
+TRAINING_REWARD = {'S1': 'linear', 'S2': 'quadratic'}[SETTING]
+ENT_COEF = {'S1': 0.0, 'S2': 0.01}[SETTING]
+MODEL_DIR = {'S1': 'Results', 'S2': 'Results_S2'}[SETTING]  # trained models of the setting
+OUT_DIR = MODEL_DIR + ('_check' if FORECAST_CHECK else '')  # result figures of this run
+print(f'Training setting {SETTING} (training reward: {TRAINING_REWARD}, entropy coefficient: {ENT_COEF}), '
+      f'forecast check: {"on" if FORECAST_CHECK else "off"}; models in {MODEL_DIR}/, figures in {OUT_DIR}/')
+
+###############################################################################
 # Function for day counter
 ###############################################################################
 
@@ -1521,15 +1543,28 @@ def compute_heuristic_baseline(env):
     # Return the accumulated objective (includes reset and step rewards)
     return env.objective
 
+def compute_forecast_baseline(env):
+    """
+    Tactical cost of the original flight schedule (no strategic delay) on the forecast weather (TAF),
+    the reference of the forecast check.
+    """
+    obs, _ = env.reset(mode='deploy', evaluate=True)
+    terminated = False
+    while not terminated:
+        obs, reward, terminated, truncated, info = env.step(0, mode='deploy', evaluate=True)
+    return env.objective
+
 bresults = []
 results = []
 delayed_arr = []
 all_delays = []  # Collect all imposed delays
 daily_delays = {}  # Store delays per day
+check_log = []  # Forecast check decisions per day
 
 # Maskable PPO hyperparameters (Section III-E); the seed also seeds the environment's generator (np_random) at its first reset
-PPO_KWARGS = dict(gamma=1, learning_rate=3e-4, batch_size=64, ent_coef=0.0, clip_range=0.2, seed=0, device='cpu')  # ent_coef: library default, as in the original experiments
-os.makedirs('Results', exist_ok=True)  # Trained models and result figures
+PPO_KWARGS = dict(gamma=1, learning_rate=3e-4, batch_size=64, ent_coef=ENT_COEF, clip_range=0.2, seed=0, device='cpu')  # ENT_COEF: 0 in setting S1 (library default, as in the original experiments), 0.01 in S2
+os.makedirs(MODEL_DIR, exist_ok=True)  # Trained models
+os.makedirs(OUT_DIR, exist_ok=True)  # Result figures
 
 for day in test_days:
     
@@ -1544,10 +1579,10 @@ for day in test_days:
                            observation_high=observation_high,
                            p_wc_trans=p_wc_trans, p_ws_trans=p_ws_trans,
                            p_wc_error=p_wc_error, p_ws_error=p_ws_error,
-                           chosen_day=day)
+                           chosen_day=day, training_reward=TRAINING_REWARD)
 
     model = MaskablePPO("MlpPolicy", env, verbose=1, **PPO_KWARGS)
-    file = "Results/sdcb_ppo_fb_" + day + ".zip"
+    file = MODEL_DIR + "/sdcb_ppo_fb_" + day + ".zip"
     file_path = Path(file)
     if (file_path).exists():
         print('Loading model...')
@@ -1561,7 +1596,7 @@ for day in test_days:
         end = time.time()
         print('Training finished in ' + str(round(end-start, 2)) + ' seconds.\n')
         print('Saving model...')
-        model.save("Results/sdcb_ppo_fb_" + day + ".zip") # Save model
+        model.save(MODEL_DIR + "/sdcb_ppo_fb_" + day + ".zip") # Save model
         print('Done.\n')
  
     print('Testing...')
@@ -1606,13 +1641,39 @@ for day in test_days:
         action_idx, _states = model.predict(obs, action_masks=action_masks, deterministic=True)
         obs, reward, terminated, truncated, info = deploy_env.step(action_idx, mode='deploy', evaluate=True)
     
+    # Delays to deploy: the policy's choice or, with the forecast check, the original schedule when the delays do
+    # not reduce the tactical cost of the day on the forecast (TAF) on which the policy chose them
+    delays = list(deploy_env.imposed_delays)
+    if FORECAST_CHECK:
+        forecast_env = sdcb.RunwayEnv(alpha = 2, beta = 1, delta = 0.3, eta = 0.1,
+                                     data=data, taf_data=taf_data, arrival_data=arrival_data,
+                                     congested_days=congested_days,
+                                     u=u, u_max=u_max, v=v, v_max=v_max,
+                                     possible_actions=possible_actions,
+                                     valid_bool=valid_bool,
+                                     wind_states=wind_states,
+                                     observation_low=observation_low,
+                                     observation_high=observation_high,
+                                     p_wc_trans=p_wc_trans, p_ws_trans=p_ws_trans,
+                                     p_wc_error=p_wc_error, p_ws_error=p_ws_error,
+                                     chosen_day=day)
+        forecast_base = compute_forecast_baseline(forecast_env)
+        kept = deploy_env.objective < forecast_base
+        n_delayed = sum(g > 0 for g in delays)
+        check_log.append((day, forecast_base, deploy_env.objective, kept, n_delayed))
+        print('Forecast check: tactical cost on the forecast ' + str(round(forecast_base, 2)) + ' without the delays, '
+              + str(round(deploy_env.objective, 2)) + ' with them -> '
+              + ('no delays proposed' if n_delayed == 0 else 'delays kept' if kept else 'original schedule kept'))
+        if not kept:
+            delays = [0] * len(delays)
+    
     # Plotting results 
     plt.show()
     plt.plot(deploy_env.arr_delayed)
     plt.title(day)
     plt.xlabel('Time steps')
     plt.ylabel('Delayed arrivals')
-    plt.savefig('Results/sdcb_ppo_policy_' + day + '.pdf', format='pdf')
+    plt.savefig(OUT_DIR + '/sdcb_ppo_policy_' + day + '.pdf', format='pdf')
     plt.show()
         
     # Compute single action using the model
@@ -1622,7 +1683,7 @@ for day in test_days:
     counter = 0
     while not terminated:
         
-        obs, reward, terminated, truncated, info = env.step(deploy_env.imposed_delays[counter], 
+        obs, reward, terminated, truncated, info = env.step(delays[counter], 
                                                             mode='test', 
                                                             evaluate=True)  
         counter += 1
@@ -1637,10 +1698,22 @@ for day in test_days:
     results.append(model_rew)
     
     # Collect delays for distribution analysis
-    all_delays.extend(deploy_env.imposed_delays)
-    daily_delays[day] = list(deploy_env.imposed_delays)
+    all_delays.extend(delays)
+    daily_delays[day] = list(delays)
     
     print('Done.\n')
+
+if FORECAST_CHECK:
+    print('\n' + '=' * 60)
+    print('FORECAST CHECK')
+    print('=' * 60)
+    proposed = [entry for entry in check_log if entry[4] > 0]
+    print('Delays proposed on ' + str(len(proposed)) + ' of ' + str(len(check_log)) + ' days; kept on '
+          + str(sum(1 for entry in proposed if entry[3])) + ', original schedule kept on the others.')
+    for day_, cost_without, cost_with, kept, n_delayed in check_log:
+        print('  ' + day_ + ': forecast cost ' + str(round(cost_without, 2)) + ' without delays, '
+              + str(round(cost_with, 2)) + ' with ' + str(n_delayed) + ' delayed flights -> '
+              + ('no delays proposed' if n_delayed == 0 else 'kept' if kept else 'rejected'))
 
 # Plotting results 
 plt.show()
@@ -1649,7 +1722,7 @@ plt.plot(bresults, 'b')
 plt.legend(['SDCB','Baseline'])
 plt.xlabel('Days')
 plt.ylabel('Tactical Cost')
-plt.savefig('Results/sdcb_ppo_results.pdf', format='pdf')
+plt.savefig(OUT_DIR + '/sdcb_ppo_results.pdf', format='pdf')
 plt.show()
 
 # Plotting improvement
@@ -1659,7 +1732,7 @@ plt.title('SDCB vs Baseline')
 plt.hist(improv_list, bins=50)
 plt.ylabel('Frequency')
 plt.xlabel('Difference')
-plt.savefig('Results/sdcb_ppo_base_improvement.pdf', format='pdf')
+plt.savefig(OUT_DIR + '/sdcb_ppo_base_improvement.pdf', format='pdf')
 plt.show()
 
 # ============================================================================
@@ -1698,7 +1771,7 @@ plt.title('Distribution of Allocated Delays Across All Time Slots', fontsize=14,
 plt.legend(fontsize=11)
 plt.grid(True, alpha=0.3, axis='y')
 plt.tight_layout()
-plt.savefig('Results/sdcb_delay_distribution_histogram.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_delay_distribution_histogram.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # ============================================================================
@@ -1715,7 +1788,7 @@ plt.ylabel('Delay (hours)', fontsize=12)
 plt.title('Box Plot of Allocated Delays', fontsize=14, fontweight='bold')
 plt.grid(axis='y', alpha=0.3)
 plt.tight_layout()
-plt.savefig('Results/sdcb_delay_boxplot.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_delay_boxplot.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # ============================================================================
@@ -1732,7 +1805,7 @@ plt.title('Mean Allocated Delays by Day (with Std Dev)', fontsize=14, fontweight
 plt.xticks(x_pos, test_days, rotation=45, ha='right')
 plt.grid(axis='y', alpha=0.3)
 plt.tight_layout()
-plt.savefig('Results/sdcb_delay_by_day.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_delay_by_day.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # ============================================================================
@@ -1747,7 +1820,7 @@ plt.ylabel('Cumulative Delay (hours)', fontsize=12)
 plt.title('Cumulative Allocated Delays Over Time', fontsize=14, fontweight='bold')
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig('Results/sdcb_cumulative_delays.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_cumulative_delays.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # ============================================================================
@@ -1765,7 +1838,7 @@ if len(non_zero_delays) > 0:
     plt.legend(fontsize=11)
     plt.grid(True, alpha=0.3, axis='y')
     plt.tight_layout()
-    plt.savefig('Results/sdcb_delay_distribution_nonzero.pdf', format='pdf', bbox_inches='tight')
+    plt.savefig(OUT_DIR + '/sdcb_delay_distribution_nonzero.pdf', format='pdf', bbox_inches='tight')
     plt.show()
     
     print(f'\n[NON-ZERO DELAY STATISTICS]')
@@ -1814,7 +1887,7 @@ plt.ylabel('Number of Flights', fontsize=12)
 plt.title('Distribution of Flights by Delay Category', fontsize=14, fontweight='bold')
 plt.grid(axis='y', alpha=0.3)
 plt.tight_layout()
-plt.savefig('Results/sdcb_delay_count_distribution.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_delay_count_distribution.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # ============================================================================
@@ -1828,7 +1901,7 @@ plt.pie(delay_frequencies, labels=labels, autopct='%1.1f%%', startangle=90,
         colors=colors_pie[:len(delay_frequencies)], explode=explode, textprops={'fontsize': 11})
 plt.title('Distribution of Delays Across All Time Slots', fontsize=14, fontweight='bold')
 plt.tight_layout()
-plt.savefig('Results/sdcb_delay_count_pie.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_delay_count_pie.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 print('Done.\n')
@@ -1876,7 +1949,7 @@ plt.ylabel('Tactical Cost', fontsize=12)
 plt.title('SDCB vs Baseline: All Results (No Filter)', fontsize=14, fontweight='bold')
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig('Results/sdcb_ppo_results_all_nofilter.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_ppo_results_all_nofilter.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # Histogram of improvements for all results
@@ -1891,7 +1964,7 @@ plt.title('Distribution of Daily Improvements (All Results, No Filter)', fontsiz
 plt.legend(fontsize=11)
 plt.grid(True, alpha=0.3, axis='y')
 plt.tight_layout()
-plt.savefig('Results/sdcb_ppo_base_improvement_all_nofilter.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_ppo_base_improvement_all_nofilter.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # Box plot comparison for all results
@@ -1903,7 +1976,7 @@ plt.ylabel('Tactical Cost', fontsize=12)
 plt.title('SDCB vs Baseline: Box Plot Comparison (All Results)', fontsize=14, fontweight='bold')
 plt.grid(axis='y', alpha=0.3)
 plt.tight_layout()
-plt.savefig('Results/sdcb_vs_baseline_boxplot_all_nofilter.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_vs_baseline_boxplot_all_nofilter.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # Scatter plot for all results
@@ -1918,7 +1991,7 @@ plt.title('SDCB vs Baseline: Scatter Plot (All Results)', fontsize=14, fontweigh
 plt.legend(fontsize=11)
 plt.grid(alpha=0.3)
 plt.tight_layout()
-plt.savefig('Results/sdcb_vs_baseline_scatter_all_nofilter.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_vs_baseline_scatter_all_nofilter.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # Cost reductions for all results, plotted as positive values when SDCB lowers
@@ -1937,7 +2010,7 @@ plt.tick_params(axis='both', labelsize=PAPER_BAR_TICK_FONTSIZE)
 plt.grid(True, alpha=0.3, axis='y')
 plt.subplots_adjust(left=0.18, bottom=0.18, top=0.88)
 plt.tight_layout()
-plt.savefig('Results/sdcb_improvements_sorted_all_nofilter.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_improvements_sorted_all_nofilter.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # Violin plot for all results
@@ -1952,7 +2025,7 @@ plt.title('SDCB vs Baseline: Distribution Density (Violin Plot, All Results)', f
 plt.tick_params(axis='y', labelsize=PAPER_TICK_FONTSIZE)
 plt.grid(axis='y', alpha=0.3)
 plt.tight_layout()
-plt.savefig('Results/sdcb_vs_baseline_violin_all_nofilter.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_vs_baseline_violin_all_nofilter.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 print('\nDone.\n')
@@ -1970,7 +2043,7 @@ plt.legend(['SDCB','Baseline'])
 plt.xlabel('Days (90th percentile filtered)')
 plt.ylabel('Tactical Cost')
 plt.title(f'Results - Baseline <= 90th Percentile ({percentile_90:.2f})')
-plt.savefig('Results/sdcb_ppo_results_90p.pdf', format='pdf')
+plt.savefig(OUT_DIR + '/sdcb_ppo_results_90p.pdf', format='pdf')
 plt.show()
 
 # Plotting improvement for 90th percentile filtered data
@@ -1982,7 +2055,7 @@ plt.ylabel('Frequency')
 plt.xlabel('Difference')
 plt.axvline(np.mean(improv_list_90p), color='r', linestyle='--', label=f'Mean: {np.mean(improv_list_90p):.2f}')
 plt.legend()
-plt.savefig('Results/sdcb_ppo_base_improvement_90p.pdf', format='pdf')
+plt.savefig(OUT_DIR + '/sdcb_ppo_base_improvement_90p.pdf', format='pdf')
 plt.show()
 
 print(f'90th percentile of baseline: {percentile_90:.2f}')
@@ -2092,7 +2165,7 @@ bp['boxes'][1].set_facecolor('lightblue')
 plt.ylabel('Tactical Cost')
 plt.title('SDCB vs Baseline: Distribution Comparison')
 plt.grid(axis='y', alpha=0.3)
-plt.savefig('Results/sdcb_vs_baseline_boxplot.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_vs_baseline_boxplot.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # ============================================================================
@@ -2109,7 +2182,7 @@ plt.ylabel('SDCB Cost')
 plt.title('SDCB vs Baseline: Scatter Plot')
 plt.legend()
 plt.grid(alpha=0.3)
-plt.savefig('Results/sdcb_vs_baseline_scatter.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_vs_baseline_scatter.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # ============================================================================
@@ -2125,7 +2198,7 @@ plt.ylabel('Improvement (SDCB - Baseline)', fontsize=PAPER_LABEL_FONTSIZE)
 plt.title('Daily Improvements Sorted (Descending)', fontsize=PAPER_TITLE_FONTSIZE, fontweight='bold')
 plt.tick_params(axis='both', labelsize=PAPER_TICK_FONTSIZE)
 plt.grid(axis='y', alpha=0.3)
-plt.savefig('Results/sdcb_improvements_sorted.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_improvements_sorted.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # ============================================================================
@@ -2138,7 +2211,7 @@ plt.ylabel('Tactical Cost', fontsize=PAPER_FOCUS_LABEL_FONTSIZE)
 plt.title('SDCB vs Baseline: Distribution (Violin Plot)', fontsize=PAPER_FOCUS_TITLE_FONTSIZE, fontweight='bold')
 plt.tick_params(axis='y', labelsize=PAPER_FOCUS_TICK_FONTSIZE)
 plt.grid(axis='y', alpha=0.3)
-plt.savefig('Results/sdcb_vs_baseline_violin.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_vs_baseline_violin.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # ============================================================================
@@ -2170,7 +2243,7 @@ for i in range(4):
     table[(0, i)].set_text_props(weight='bold', color='white')
 
 plt.title('Summary Statistics: SDCB vs Baseline', fontsize=14, weight='bold', pad=20)
-plt.savefig('Results/sdcb_vs_baseline_summary_table.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_vs_baseline_summary_table.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 print('Done.\n')
@@ -2222,7 +2295,7 @@ plt.title('Distribution of Percentage Improvements (SDCB vs Baseline)', fontsize
 plt.legend(fontsize=11)
 plt.grid(True, alpha=0.3, axis='y')
 plt.tight_layout()
-plt.savefig('Results/sdcb_pct_improvement_histogram.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_pct_improvement_histogram.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # ============================================================================
@@ -2238,7 +2311,7 @@ plt.title('Daily Percentage Improvements (SDCB vs Baseline)', fontsize=14, fontw
 plt.legend(fontsize=11)
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig('Results/sdcb_pct_improvement_timeline.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_pct_improvement_timeline.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # ============================================================================
@@ -2257,7 +2330,7 @@ plt.tick_params(axis='both', labelsize=PAPER_BAR_TICK_FONTSIZE)
 plt.grid(True, alpha=0.3, axis='y')
 plt.subplots_adjust(left=0.18, bottom=0.18, top=0.88)
 plt.tight_layout()
-plt.savefig('Results/sdcb_pct_improvements_sorted.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_pct_improvements_sorted.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # ============================================================================
@@ -2273,7 +2346,7 @@ if len(improv_pct_valid) > 0:
     plt.axhline(y=0, color='red', linestyle='--', linewidth=1, alpha=0.5, label='Zero improvement')
     plt.legend()
     plt.tight_layout()
-    plt.savefig('Results/sdcb_pct_improvement_boxplot.pdf', format='pdf', bbox_inches='tight')
+    plt.savefig(OUT_DIR + '/sdcb_pct_improvement_boxplot.pdf', format='pdf', bbox_inches='tight')
     plt.show()
 else:
     print('Skipping box plot - no valid percentage improvements to plot')
@@ -2294,7 +2367,7 @@ cbar.ax.tick_params(labelsize=PAPER_FOCUS_TICK_FONTSIZE)
 plt.tick_params(axis='both', labelsize=PAPER_FOCUS_TICK_FONTSIZE)
 plt.grid(alpha=0.3)
 plt.tight_layout()
-plt.savefig('Results/sdcb_baseline_vs_pct_improvement.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_baseline_vs_pct_improvement.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # ============================================================================
@@ -2310,7 +2383,7 @@ plt.ylabel('Cumulative Percentage Improvement (%)', fontsize=12)
 plt.title('Cumulative Percentage Improvement Over Days', fontsize=14, fontweight='bold')
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig('Results/sdcb_cumulative_pct_improvement.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_cumulative_pct_improvement.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # ============================================================================
@@ -2338,7 +2411,7 @@ ax1.legend(lines, labels, fontsize=11, loc='upper left')
 
 plt.title('Absolute vs Percentage Improvement (Side-by-side Comparison)', fontsize=14, fontweight='bold')
 plt.tight_layout()
-plt.savefig('Results/sdcb_absolute_vs_pct_improvement.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(OUT_DIR + '/sdcb_absolute_vs_pct_improvement.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 print('Done generating percentage improvement plots.\n')
@@ -2400,7 +2473,7 @@ for k, day in enumerate(stochastic_days):
     
     # Load the trained model
     model = MaskablePPO("MlpPolicy", env, verbose=0, **PPO_KWARGS)
-    file = "Results/sdcb_ppo_fb_" + day + ".zip"
+    file = MODEL_DIR + "/sdcb_ppo_fb_" + day + ".zip"
     if Path(file).exists():
         prev_model = MaskablePPO.load(file, env=env)
         model.set_parameters(prev_model.get_parameters())
@@ -2465,7 +2538,7 @@ if len(results_stochastic) > 0:
     plt.legend()
     plt.xticks(x_pos, [f'Day {i+1}' for i in range(len(results_stochastic))])
     plt.grid(axis='y', alpha=0.3)
-    plt.savefig('Results/sdcb_vs_baseline_stochastic.pdf', format='pdf', bbox_inches='tight')
+    plt.savefig(OUT_DIR + '/sdcb_vs_baseline_stochastic.pdf', format='pdf', bbox_inches='tight')
     plt.show()
     
     # Comparison: observed weather (METAR) vs sampled weather scenario
@@ -2490,7 +2563,7 @@ if len(results_stochastic) > 0:
     plt.grid(alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('Results/deterministic_vs_stochastic_comparison.pdf', format='pdf', bbox_inches='tight')
+    plt.savefig(OUT_DIR + '/deterministic_vs_stochastic_comparison.pdf', format='pdf', bbox_inches='tight')
     plt.show()
 
 # ============================================================================
