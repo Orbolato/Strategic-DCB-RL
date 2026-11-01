@@ -111,6 +111,21 @@ python maskable_ppo_test.py --setting S2 --forecast-check   # S2 with the foreca
 
 The same options apply to `maskable_ppo_test_uam.py`. The training reward is selected by the `training_reward` argument of `RunwayEnv` (`'linear'` by default, or `'quadratic'`); the reported tactical costs always use the quadratic evaluation cost.
 
+### Additional experiments in the PhD thesis
+
+The author's PhD thesis (Sections 4.4 and 4.5) evaluates both training settings over 10 independent training runs per test day (seeds 0 to 9), with the delays deployed directly and with the forecast check. The aggregate reduction of the tactical cost (mean over the runs, with its 95% confidence interval) was:
+
+| Case | Setting | Policy alone | With forecast check |
+|---|---|---|---|
+| Conventional ATM at SBGR | S1 | 7.0% [−1.3%, 15.4%] | 10.9% [6.8%, 15.0%] |
+| Conventional ATM at SBGR | S2 | −8.1% [−26.7%, 10.6%] | 18.3% [16.4%, 20.2%] |
+| UAM | S1 | 63.1% [56.5%, 69.6%] | 63.3% [56.7%, 69.9%] |
+| UAM | S2 | 59.1% [53.8%, 64.3%] | 58.8% [53.6%, 64.1%] |
+
+During the thesis research, Bayes' rule for the weather scenarios, $q(S_t) \propto P(S_t \mid S_{t-1})\,P(S_t \mid \hat S_t)\,/\,P(S_t)$, was also tested as an alternative to the product rule of the environments, $q(S_t) \propto P(S_t \mid S_{t-1})\,P(S_t \mid \hat S_t)$, with setting S1 (two runs on four test days per case). It brought no consistent improvement: the total cost was lower on the four conventional-ATM days, mostly because of one day on which the S1 runs themselves vary widely, and higher on the four UAM days. The outputs of these experiments are not part of this repository.
+
+> Carvalho, L.O. (2026). *A reinforcement learning approach for air traffic flow and capacity management under uncertainty.* PhD thesis, Aeronautics Institute of Technology (ITA), São José dos Campos, Brazil.
+
 ### Reproducibility boundary
 
 The committed CSVs are the canonical experiment inputs. The implementation fixes the documented PPO seed, but exact equality of newly trained neural-network weights or final numerical outputs is **not guaranteed** across operating systems, hardware, PyTorch builds or numerical libraries. CI therefore verifies the archived inputs, repository contracts and Python syntax; it does not attempt all-day PPO retraining.
