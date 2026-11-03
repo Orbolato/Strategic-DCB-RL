@@ -129,6 +129,10 @@ The committed CSVs are the canonical experiment inputs. The implementation fixes
 | Training reward | Queue and configuration-switch penalties are linear in the queue lengths in setting S1 (default) and quadratic in setting S2. The reported tactical cost uses the quadratic evaluation objective with its evaluation-time scaling. |
 | PPO | `sb3_contrib.MaskablePPO("MlpPolicy")` with γ = 1, learning rate 3e-4, batch 64, entropy coefficient 0 in setting S1 or 0.01 in setting S2, clip 0.2, seed 0 (it also seeds the environment's weather sampler, Gymnasium's `np_random`, at the first reset), trained on the CPU with one thread so that reruns with the same seed and software stack give identical policies; other settings follow sb3-contrib 2.7.1 defaults used by the archived environment |
 
+### Note on the weather scenario sampling rule
+
+The training scenarios draw the weather condition and the wind state of each slot from the normalized product of the TAF confusion row and the transition row from the previous slot, `q(Y_t) ∝ P(Y_t | Y_{t-1}) · P(Y_t | Y'_t)` (Eqs. 14 and 16; `generate_weather_scenario()` in `improved_gym_sdcboptimizer_specific.py` and `improved_gym_sdcboptimizer_specific_uam.py`), as in the runway-capacity study. This product is naive Bayes with an effective prior proportional to `P(Y_t)²`, so the scenarios contain less adverse weather than the observations; Bayes' rule would divide it by the prior `P(Y_t)`. The interpretation, the effect on the scenarios, and a sensitivity analysis on the runway-capacity problem are documented in [Stochastic-Runway-Capacity-RL](https://github.com/Orbolato/Stochastic-Runway-Capacity-RL#note-on-the-weather-scenario-sampling-rule). The rule was not varied in this study, and the code is unchanged.
+
 ## Figures and tables
 
 | Paper | Script | Output |
