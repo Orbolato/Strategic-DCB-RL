@@ -55,14 +55,18 @@ _parser.add_argument('--setting', choices=['S1', 'S2'], default='S1',
 _parser.add_argument('--forecast-check', action='store_true',
                      help="keep each day's ground delays only if they reduce the tactical cost of the day on the "
                           'forecast (TAF); otherwise keep the original schedule')
+_parser.add_argument('--zeta', type=float, default=0.0,
+                     help="exponent of the prior in the weather scenario rule: 0 (default) is the published rule, "
+                          "1 is Bayes' rule; see code/README.md, 'Note on the weather scenario sampling rule'")
 _args, _ = _parser.parse_known_args()
-SETTING, FORECAST_CHECK = _args.setting, _args.forecast_check
+SETTING, FORECAST_CHECK, ZETA = _args.setting, _args.forecast_check, _args.zeta
 TRAINING_REWARD = {'S1': 'linear', 'S2': 'quadratic'}[SETTING]
 ENT_COEF = {'S1': 0.0, 'S2': 0.01}[SETTING]
-MODEL_DIR = {'S1': 'Results_UAM', 'S2': 'Results_UAM_S2'}[SETTING]  # trained models of the setting
+MODEL_DIR = {'S1': 'Results_UAM', 'S2': 'Results_UAM_S2'}[SETTING] + ('' if ZETA == 0 else f'_zeta{ZETA:g}')  # trained models of the setting
 OUT_DIR = MODEL_DIR + ('_check' if FORECAST_CHECK else '')  # result figures of this run
 print(f'Training setting {SETTING} (training reward: {TRAINING_REWARD}, entropy coefficient: {ENT_COEF}), '
-      f'forecast check: {"on" if FORECAST_CHECK else "off"}; models in {MODEL_DIR}/, figures in {OUT_DIR}/')
+      f'forecast check: {"on" if FORECAST_CHECK else "off"}, weather scenario rule: zeta = {ZETA:g}; '
+      f'models in {MODEL_DIR}/, figures in {OUT_DIR}/')
 
 ###############################################################################
 # Data preprocessing
@@ -361,6 +365,10 @@ for i in range(taf_data.shape[0]):
     if not test_mask[i]:
         p_wc_error[taf_data.loc[i,'weather_condition'], data.loc[i,'weather_condition']] += 1
         p_ws_error[taf_data.loc[i,'wind_state'], data.loc[i,'wind_state']] += 1
+# Prior of the weather scenario rule: share of each state in the METARs of these rows (used only if --zeta != 0)
+p_wc_prior = p_wc_error.sum(axis=0) / p_wc_error.sum()
+p_ws_prior = p_ws_error.sum(axis=0) / p_ws_error.sum()
+SCENARIO_RULE = dict(zeta=ZETA, p_wc_prior=p_wc_prior, p_ws_prior=p_ws_prior)  # passed to every environment
 for i in range(p_wc_error.shape[0]):
     p_wc_error[i] = p_wc_error[i] / np.sum(p_wc_error[i])
 for i in range(p_ws_error.shape[0]):
@@ -676,7 +684,7 @@ for day in test_days:
                            observation_high=observation_high,
                            p_wc_trans=p_wc_trans, p_ws_trans=p_ws_trans,
                            p_wc_error=p_wc_error, p_ws_error=p_ws_error,
-                           chosen_day=day, training_reward=TRAINING_REWARD)
+                           chosen_day=day, training_reward=TRAINING_REWARD, **SCENARIO_RULE)
 
     model = MaskablePPO("MlpPolicy", env, verbose=1, **PPO_KWARGS)
     file = MODEL_DIR + "/sdcb_ppo_fb_" + day + ".zip"
@@ -710,7 +718,7 @@ for day in test_days:
                                  observation_high=observation_high,
                                  p_wc_trans=p_wc_trans, p_ws_trans=p_ws_trans,
                                  p_wc_error=p_wc_error, p_ws_error=p_ws_error,
-                                 chosen_day=day)
+                                 chosen_day=day, **SCENARIO_RULE)
     
     # Compute baseline by applying heuristic to original flight schedule
     base_rew = compute_heuristic_baseline(baseline_env)
@@ -726,7 +734,7 @@ for day in test_days:
                                observation_high=observation_high,
                                p_wc_trans=p_wc_trans, p_ws_trans=p_ws_trans,
                                p_wc_error=p_wc_error, p_ws_error=p_ws_error,
-                               chosen_day=day)
+                               chosen_day=day, **SCENARIO_RULE)
     
     # Compute single action using the model
     obs, _ = deploy_env.reset(mode='deploy', evaluate=True)
@@ -753,7 +761,7 @@ for day in test_days:
                                      observation_high=observation_high,
                                      p_wc_trans=p_wc_trans, p_ws_trans=p_ws_trans,
                                      p_wc_error=p_wc_error, p_ws_error=p_ws_error,
-                                     chosen_day=day)
+                                     chosen_day=day, **SCENARIO_RULE)
         forecast_base = compute_forecast_baseline(forecast_env)
         kept = deploy_env.objective < forecast_base
         n_delayed = sum(g > 0 for g in delays)
@@ -1548,7 +1556,7 @@ for k, day in enumerate(stochastic_days):
                                        observation_high=observation_high,
                                        p_wc_trans=p_wc_trans, p_ws_trans=p_ws_trans,
                                        p_wc_error=p_wc_error, p_ws_error=p_ws_error,
-                                       chosen_day=day)
+                                       chosen_day=day, **SCENARIO_RULE)
     
     obs, _ = baseline_env_stoch.reset(seed=scenario_seed, mode='train', evaluate=True)
     terminated = False
@@ -1568,7 +1576,7 @@ for k, day in enumerate(stochastic_days):
                         observation_high=observation_high,
                         p_wc_trans=p_wc_trans, p_ws_trans=p_ws_trans,
                         p_wc_error=p_wc_error, p_ws_error=p_ws_error,
-                        chosen_day=day)
+                        chosen_day=day, **SCENARIO_RULE)
     
     # Load the trained model
     model = MaskablePPO("MlpPolicy", env, verbose=0, **PPO_KWARGS)
@@ -1588,7 +1596,7 @@ for k, day in enumerate(stochastic_days):
                                    observation_high=observation_high,
                                    p_wc_trans=p_wc_trans, p_ws_trans=p_ws_trans,
                                    p_wc_error=p_wc_error, p_ws_error=p_ws_error,
-                                   chosen_day=day)
+                                   chosen_day=day, **SCENARIO_RULE)
         
         obs, _ = deploy_env.reset(mode='deploy', evaluate=True)
         terminated = False
