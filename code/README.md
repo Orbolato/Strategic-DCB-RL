@@ -94,13 +94,14 @@ The console prints the statistics used in Tables I/III (`[1] DESCRIPTIVE STATIST
 
 ### Training settings and the forecast check
 
-Both scripts accept two options, which select one of two training settings and add an optional check at deployment:
+Both scripts accept these options, which select one of two training settings, add an optional check at deployment, and set the weather scenario rule:
 
 | Option | Effect |
 |---|---|
 | `--setting S1` (default) | Entropy coefficient 0 and a training reward linear in the queue lengths. Models in `Results/` (`Results_UAM/` for Case 2). |
 | `--setting S2` | Entropy coefficient 0.01 and a quadratic-form queue/configuration-switch training reward. It has the same quadratic structure as the tactical evaluation objective but does not include the evaluation-time factor of 45. Models in `Results_S2/` (`Results_UAM_S2/`). |
 | `--forecast-check` | After the deployment on the forecast, the day is simulated on the same forecast (TAF) without the policy's delays. The delays are kept only if they reduce the forecast tactical cost; otherwise the original schedule is kept, and the test replays it. The check uses only the information available when the delays are decided and needs no retraining: the models of the selected setting are reused. Figures go to a separate folder (`Results_check/`, `Results_S2_check/`, `Results_UAM_check/`, `Results_UAM_S2_check/`), and the console adds a `FORECAST CHECK` section with the decision for each day. The per-day `sdcb_ppo_policy_<day>.pdf` figure shows the policy's pre-check proposal; when the proposal is rejected, zero strategic delays are used in the METAR test and in the aggregate delay statistics. |
+| `--zeta Z` | Exponent of the prior in the weather scenario rule (default 0, the published rule; 1 is Bayes' rule); see the [note on the sampling rule](#note-on-the-weather-scenario-sampling-rule). With Z ≠ 0 the models go to `<models folder>_zeta<Z>/`, so the script neither loads nor overwrites the models of Z = 0. |
 
 ```bash
 python maskable_ppo_test.py                                 # S1, delays deployed directly (default)
@@ -131,7 +132,7 @@ The committed CSVs are the canonical experiment inputs. The implementation fixes
 
 ### Note on the weather scenario sampling rule
 
-The training scenarios draw the weather condition and the wind state of each slot from the normalized product of the TAF confusion row and the transition row from the previous slot, `q(Y_t) ∝ P(Y_t | Y_{t-1}) · P(Y_t | Y'_t)` (Eqs. 14 and 16; `generate_weather_scenario()` in `improved_gym_sdcboptimizer_specific.py` and `improved_gym_sdcboptimizer_specific_uam.py`), as in the runway-capacity study. This product is naive Bayes with an effective prior proportional to `P(Y_t)²`, so the scenarios contain less adverse weather than the observations; Bayes' rule would divide it by the prior `P(Y_t)`. The interpretation, the effect on the scenarios, and a sensitivity analysis on the runway-capacity problem are documented in [Stochastic-Runway-Capacity-RL](https://github.com/Orbolato/Stochastic-Runway-Capacity-RL#note-on-the-weather-scenario-sampling-rule). The rule was not varied in this study, and the code is unchanged.
+The training scenarios draw the weather condition and the wind state of each slot from the normalized product of the TAF confusion row and the transition row from the previous slot, `q(Y_t) ∝ P(Y_t | Y_{t-1}) · P(Y_t | Y'_t)` (Eqs. 14 and 16; `generate_weather_scenario()` in `improved_gym_sdcboptimizer_specific.py` and `improved_gym_sdcboptimizer_specific_uam.py`), as in the runway-capacity study. This product is naive Bayes with an effective prior proportional to `P(Y_t)²`, so the scenarios contain less adverse weather than the observations; Bayes' rule would divide it by the prior `P(Y_t)`. The interpretation, the effect on the scenarios, and a sensitivity analysis on the runway-capacity problem are documented in [Stochastic-Runway-Capacity-RL](https://github.com/Orbolato/Stochastic-Runway-Capacity-RL#note-on-the-weather-scenario-sampling-rule). The rule was not varied in this study. After publication, both environments gained a `zeta` option (default 0, the published rule) with the priors `p_wc_prior` and `p_ws_prior`, the shares of each state in the METAR rows used for the confusion matrices; the scripts compute the priors and set `zeta` from `--zeta`. With ζ = 0 the environments skip the division, so seeded training scenarios are identical to those of the published code.
 
 ## Figures and tables
 
